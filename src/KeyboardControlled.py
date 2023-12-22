@@ -69,23 +69,12 @@ def autoMotors():
 
     except:
         print("Error has happened")
-def receivedData():   
-  try:
-    url = f"http://{esp8266_ip}/sendData"  
-    response = requests.get(url)
-    data_received = response.text
-    print("Received Data:", data_received)
-  except:
-    print("Error has happened")
 
-
-
- 
 
 # Initialize a variable to track if any movement key is pressed
-movement_key_pressed = False
-auto_movement = False
+movement_key_pressed = False        
 while True:
+                 
     if keyboard.is_pressed("w"):
         moveForward()
         movement_key_pressed = True
@@ -99,10 +88,7 @@ while True:
         moveLeft() 
         movement_key_pressed = True
     elif keyboard.is_pressed("x"):
-        while not keyboard.is_pressed("c"):
-            movement_key_pressed = True
-            receivedData()
-            time.sleep(2)  
+        autoMotors()  
     else:
         # Check if any movement key was previously pressed
         if movement_key_pressed:
