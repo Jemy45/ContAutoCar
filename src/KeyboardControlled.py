@@ -1,8 +1,11 @@
+
+#-------------imported libraries------------
 import keyboard
 import requests
 import time
-
+#-----ESP8266 default ip as AP-------------
 esp8266_ip = "192.168.4.1" 
+#------Function sends strings to ESP over URL-------------------------
 def moveForward():
       try:   
          print("move forward")

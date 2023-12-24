@@ -35,7 +35,14 @@
 #define MOTOR_RIGHT_BACKWARD 15  // D7
 #define MOTOR_LEFT_FORWARD 14  // D6
 #define MOTOR_LEFT_BACKWARD 12  // D5
- bool automated_motors =false;
+//-------SpeedOfMotors------------
+int rightSpeedBackward = 90;
+int rightSpeedForward = 90;
+int leftSpeedForward = 110;
+int leftSpeedBackward =110;
+int rotSpeed = 100;
+
+ bool automated_motors =false  ;//Variable checks for automated object avoidance mode
 // //-------------Servo_Define------------
  Servo servo_sensor;
  #define servoPin 0 //D3 
@@ -43,33 +50,34 @@
 #define trigPin 5 //D1
 #define echoPin 4 //D2
 HCSR04 US(trigPin, echoPin); //(trig pin , echo pin)
-unsigned int dist =0;
 
-int rightSpeedBackward = 90;
-int rightSpeedForward = 90;
-int leftSpeedForward = 110;
-int leftSpeedBackward =110;
-int rotSpeed = 100;
-int coeff = 1;
+
+
 
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(9600); // Initiallize Serial monitor with baud rate 9600
 
-  servo_sensor.attach(servoPin);
+  servo_sensor.attach(servoPin);// Attach servo motor with its connected esp pin
+//------Set Motors pins as Output------------
   pinMode (MOTOR_RIGHT_FORWARD,OUTPUT );
   pinMode (MOTOR_RIGHT_BACKWARD,OUTPUT );
   pinMode (MOTOR_LEFT_FORWARD,OUTPUT );
   pinMode (MOTOR_LEFT_BACKWARD,OUTPUT );
  
- //-----------Wifi controlling --------------
+ //-----------Wi-Fi Setup (SettingESP as access point)-----------
   WiFi.mode(WIFI_AP);
   WiFi.softAP(ssid, password);
   IPAddress IP = WiFi.softAPIP();
   Serial.print("AP IP address: ");
   Serial.println(IP);
-
-  server.on("/getData", HTTP_POST, handlePostData); //(Place,Method,CallingFn)
+/*
+  @brief : this function is always listening for incoming data on server of ES8266 and then calling its handle function
+  @param (1st): route of data on the server 
+  @param (2nd): Transmition method of data either post (receive) or get(send) to ESP
+  @param (3rd): Calling handle function that its always called when a new data is come
+*/
+  server.on("/getData", HTTP_POST, handlePostData);    //(Place,Method,CallingFn)
   server.on("/rightSpeedForward", HTTP_POST, handleRightSpeedForward);
   server.on("/rightSpeedBackward", HTTP_POST, handleRightSpeedBackward);
   server.on("/leftSpeedForward", HTTP_POST, handleLeftSpeedForward);
@@ -77,22 +85,22 @@ void setup() {
   server.on("/servoAngle", HTTP_POST, handleServoMotor);
   server.on("/rotSpeed", HTTP_POST, handleRotSpeed);
   server.on("/sendData", HTTP_GET,handleGetData);
-  server.begin();
+
+  server.begin();// This function makes ESP enable to listen for incoming requests
 
 }
 
 void loop() {
-   server.handleClient();
+   server.handleClient(); // This function handles clients and thier requests continously
+   //----------Object Avoidance Part---------------------------
    if(automated_motors==true){
-      dist = US.dist();
-      Serial.println("Automatedone");
-  
-   Serial.println(dist);
-   servo_sensor.write(90);
-   delay(50);
+      servo_sensor.write(90);
+      delay(50);
+      unsigned int dist = US.dist();
+      Serial.println("Autonomous Time :)");
+      Serial.println(dist);
    moveForward(leftSpeedForward,rightSpeedForward);
    if (dist < 35){
-
      stopMotors();
      delay(100);
     moveBackward(leftSpeedBackward,rightSpeedBackward);
@@ -100,27 +108,50 @@ void loop() {
     stopMotors();
     delay(100);
      servo_sensor.write(0);
+     delay(500);
      unsigned int dist_right = US.dist();
-     delay(100);
+     
      servo_sensor.write(180); 
+     delay(500);
      unsigned int dist_left = US.dist();
      
      if ( dist_right > dist_left)
      {
        moveRight(rotSpeed) ;
+       delay(300);
+       stopMotors();
+       delay(100);
      }
-     else {
+     else if (dist_right< dist_left){
        moveLeft(rotSpeed);
+       delay(300);
+       stopMotors();
+       delay(100);
      }
-    delay(500);
+     else if (dist_right<35 && dist_left <35)
+     {
+       moveLeft(rotSpeed);
+       delay(600);
+       stopMotors();
+       delay(100);
+     }
    }
    }
 }
-
+/*
+@breif handlePostData(): Receives the incoming data and comparing it to get motors state
+*/
 void handlePostData() {
-  String receivedData = server.arg("data");
+  String receivedData = server.arg("data");// Function recieves data 
   Serial.println("Received data: " + receivedData);
+/*
+ @brief: this function is a response from receiver (ESP) to transmitter to ensure that data transmitted successfully
+ @param (1st): This is the status of sending data either 200(successfully) or 404(unsuccessfully)
+ @param (2nd): State that the received data was text
+ @param (3rd): Data sent
+*/
   server.send(200, "text/plain","Received data: " + receivedData);
+
   if(receivedData == "forward" || receivedData == "backward" || receivedData == "right" || receivedData == "left" || receivedData == "stop")
   {
     handleMotors(receivedData);
@@ -131,13 +162,14 @@ void handlePostData() {
   }
   
   }
+  //Function that sends data from ESP to console
   void handleGetData(){
     unsigned int distance = US.dist();
     String dataToSend = String(distance); 
     server.send(200, "text/plain", dataToSend);
     
-    
   }
+  //--------Functions receives motors speed and servo angle----------
   void handleRightSpeedForward()
   {
   String receivedData = server.arg("data");
@@ -181,8 +213,8 @@ void handlePostData() {
   int servoAngle=receivedData.toInt();
   servo_sensor.write(servoAngle);
   }
-
-
+//---------------------------------------------------
+// Function that switches between motor state according to 1st letter of received data 
 void handleMotors(String state)
 {
   switch (state[0])
@@ -208,6 +240,7 @@ void handleMotors(String state)
 }
 }
 
+//-----------Controlling functions of Motors--------------------------
 void moveRight(int rotSpeed) {
   Serial.print("MoveRight with speed: ");
   Serial.println(rotSpeed);

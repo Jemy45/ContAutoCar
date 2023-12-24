@@ -2,8 +2,9 @@ import tkinter as tk
 import requests 
 import time
 esp8266_ip = "192.168.4.1"
-ultrasonic_received=False
 
+ultrasonic_received=False #Flag checks for US receiving data availability 
+#------Functions Send speed of motors and Servo angle---------------
 def sendSpeedRightForward():
     try:
         data_to_send= txtCMD1.get()
@@ -59,8 +60,8 @@ def sendServoAngle():
         txtCMD6.set("")
     except:
         print("Error has happened")
-
-def receivedData():   
+# ----------------function receives Ultrasonic data from ESP--------
+def receivedData():  
   try:
     url = f"http://{esp8266_ip}/sendData"  
     response = requests.get(url)
@@ -68,6 +69,7 @@ def receivedData():
     return data_received
   except:
     print("Error has happened")
+ #--------Functions changes flag of receiving data according to button clicked -----------   
 def startReceiving():
     global ultrasonic_received
     ultrasonic_received = True
@@ -76,7 +78,8 @@ def startReceiving():
 def stopReceiving():
     global ultrasonic_received
     ultrasonic_received = False
-       
+#------------------------------------------
+#-----------Function that fills text with ultrasonic data-------       
 def updateData():
     global ultrasonic_received
     if ultrasonic_received:
@@ -85,7 +88,8 @@ def updateData():
         text_widget.insert(tk.END, ultrasonicData + "\n")  # Insert data at the end of the text
         text_widget.see(tk.END)  # Scroll to show the latest data
       root.after(1000, updateData)  # Update every second (adjust as needed)
-
+      
+#--------Setup GUI and drawing it-------------------
 root = tk.Tk()
 mf = tk.Frame(root)
 mf.pack()
@@ -116,7 +120,7 @@ tk.Button(mf, text='Send', command=sendServoAngle).grid(row=5, column=2)
 tk.Button(mf, text="Start Receiving US Data", command=startReceiving).grid(row=6, column=0)
 tk.Button(mf, text="Stop Receiving US Data", command=stopReceiving).grid(row=6, column=1)
 
-# Create a Text widget to display the data-------CGPT
+#---------- Create a Text widget to display the data---------
 text_widget = tk.Text(root, height=20, width=40)
 text_widget.pack()
 #------------------------------------------
