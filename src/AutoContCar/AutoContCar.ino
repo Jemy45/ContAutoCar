@@ -1,5 +1,5 @@
 /*******************************************************************************************************************************************************
-* ESP8266 Object Avoidance car by Rodina Ehab, Perihane Hossam, Habiba, Mostafa Khashan, Ahmed Gamal                                                   *
+* ESP8266 Object Avoidance car by Rodina Ehab, Perihane Hossam, Habiba Hatem, Mostafa Khashan, Ahmed Gamal                                                   *
 *                                                                                                                                                      *                      
 * Controlled with python code over Access point ESP8266 wifi                                                                                           *
 * ESP8266 keyboard controlled and autonomous object avoidance car                                                                                      *
@@ -45,8 +45,10 @@
 HCSR04 US(trigPin, echoPin); //(trig pin , echo pin)
 unsigned int dist =0;
 
-int leftSpeed = 150;
-int rightSpeed = 150;
+int rightSpeedBackward = 90;
+int rightSpeedForward = 90;
+int leftSpeedForward = 110;
+int leftSpeedBackward =110;
 int rotSpeed = 100;
 int coeff = 1;
 
@@ -68,8 +70,11 @@ void setup() {
   Serial.println(IP);
 
   server.on("/getData", HTTP_POST, handlePostData); //(Place,Method,CallingFn)
-  server.on("/leftSpeed", HTTP_POST, handleLeftSpeed);
-  server.on("/rightSpeed", HTTP_POST, handleRightSpeed);
+  server.on("/rightSpeedForward", HTTP_POST, handleRightSpeedForward);
+  server.on("/rightSpeedBackward", HTTP_POST, handleRightSpeedBackward);
+  server.on("/leftSpeedForward", HTTP_POST, handleLeftSpeedForward);
+  server.on("/leftSpeedBackward", HTTP_POST, handleLeftSpeedBackward);
+  server.on("/servoAngle", HTTP_POST, handleServoMotor);
   server.on("/rotSpeed", HTTP_POST, handleRotSpeed);
   server.on("/sendData", HTTP_GET,handleGetData);
   server.begin();
@@ -85,17 +90,21 @@ void loop() {
    Serial.println(dist);
    servo_sensor.write(90);
    delay(50);
-   moveForward(leftSpeed,rightSpeed);
-   if (dist < 20){
+   moveForward(leftSpeedForward,rightSpeedForward);
+   if (dist < 35){
 
      stopMotors();
-    moveBackward(leftSpeed,rightSpeed);
+     delay(100);
+    moveBackward(leftSpeedBackward,rightSpeedBackward);
     delay(500);
-    
+    stopMotors();
+    delay(100);
      servo_sensor.write(0);
-     float dist_right = dist;
+     unsigned int dist_right = US.dist();
+     delay(100);
      servo_sensor.write(180); 
-     float dist_left = dist;
+     unsigned int dist_left = US.dist();
+     
      if ( dist_right > dist_left)
      {
        moveRight(rotSpeed) ;
@@ -123,25 +132,25 @@ void handlePostData() {
   
   }
   void handleGetData(){
-    
-    String dataToSend = String(dist); 
+    unsigned int distance = US.dist();
+    String dataToSend = String(distance); 
     server.send(200, "text/plain", dataToSend);
     
     
   }
-  void handleLeftSpeed()
+  void handleRightSpeedForward()
   {
   String receivedData = server.arg("data");
   Serial.println("Received data: " + receivedData);
   server.send(200, "text/plain","Received data: " + receivedData);
-  leftSpeed=receivedData.toInt();
+  rightSpeedForward=receivedData.toInt();
   }
-   void handleRightSpeed()
+   void handleRightSpeedBackward()
   {
   String receivedData = server.arg("data");
   Serial.println("Received data: " + receivedData);
   server.send(200, "text/plain","Received data: " + receivedData);
-  rightSpeed=receivedData.toInt();
+  rightSpeedBackward=receivedData.toInt();
   }
    void handleRotSpeed()
   {
@@ -150,6 +159,28 @@ void handlePostData() {
   server.send(200, "text/plain","Received data: " + receivedData);
   rotSpeed=receivedData.toInt();
   }
+  void handleLeftSpeedForward()
+  {
+  String receivedData = server.arg("data");
+  Serial.println("Received data: " + receivedData);
+  server.send(200, "text/plain","Received data: " + receivedData);
+  leftSpeedForward=receivedData.toInt();
+  }
+    void handleLeftSpeedBackward()
+  {
+  String receivedData = server.arg("data");
+  Serial.println("Received data: " + receivedData);
+  server.send(200, "text/plain","Received data: " + receivedData);
+  leftSpeedBackward=receivedData.toInt();
+  }
+  void handleServoMotor()
+  {
+  String receivedData = server.arg("data");
+  Serial.println("Received data: " + receivedData);
+  server.send(200, "text/plain","Received data: " + receivedData);
+  int servoAngle=receivedData.toInt();
+  servo_sensor.write(servoAngle);
+  }
 
 
 void handleMotors(String state)
@@ -157,11 +188,11 @@ void handleMotors(String state)
   switch (state[0])
   {
     case 'f':
-     moveForward(leftSpeed,rightSpeed);
+     moveForward(leftSpeedForward,rightSpeedForward);
       break;
 
     case 'b':
-      moveBackward(leftSpeed,rightSpeed);
+      moveBackward(leftSpeedBackward,rightSpeedBackward);
       break;
 
     case 'l':
@@ -194,25 +225,25 @@ void moveLeft(int rotSpeed) {
    analogWrite(MOTOR_LEFT_FORWARD , 0);
    analogWrite(MOTOR_LEFT_BACKWARD , 0);
 }
-void moveForward(int leftSpeed,int rightSpeed){
+void moveForward(int leftSpeedForward,int rightSpeedForward){
    Serial.print("MoveForward with Left,Right speed: ");
-   Serial.print(leftSpeed);
+   Serial.print(leftSpeedForward);
    Serial.print(", ");
-   Serial.println(rightSpeed);
-   analogWrite(MOTOR_RIGHT_FORWARD , rightSpeed);
+   Serial.println(rightSpeedForward);
+   analogWrite(MOTOR_RIGHT_FORWARD , rightSpeedForward);
    analogWrite(MOTOR_RIGHT_BACKWARD , 0);
-   analogWrite(MOTOR_LEFT_FORWARD , leftSpeed);
+   analogWrite(MOTOR_LEFT_FORWARD , leftSpeedForward);
    analogWrite(MOTOR_LEFT_BACKWARD , 0);
 }
-void moveBackward(int leftSpeed,int rightSpeed){
+void moveBackward(int leftSpeedBackward,int rightSpeedBackward){
    Serial.print("MoveBackward with Left,Right speed: ");
-   Serial.print(leftSpeed);
+   Serial.print(leftSpeedBackward);
    Serial.print(", ");
-   Serial.println(rightSpeed);
+   Serial.println(rightSpeedBackward);
    analogWrite(MOTOR_RIGHT_FORWARD , 0);
-   analogWrite(MOTOR_RIGHT_BACKWARD , rightSpeed);
+   analogWrite(MOTOR_RIGHT_BACKWARD , rightSpeedBackward);
    analogWrite(MOTOR_LEFT_FORWARD , 0);
-   analogWrite(MOTOR_LEFT_BACKWARD , leftSpeed);
+   analogWrite(MOTOR_LEFT_BACKWARD , leftSpeedBackward);
 }
 void stopMotors() {
    Serial.println("Stopmotors");
